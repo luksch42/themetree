@@ -5,63 +5,49 @@ on:
     branches:
       - main
     paths:
-      - 'package.json'  # Only run when package.json changes
+      - 'package.json'
 
 permissions:
-  contents: write  # Needed for creating tags and releases
+  contents: write
 
 jobs:
-  check-and-tag:
+  release:
     runs-on: ubuntu-latest
-    outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
-      version: ${{ steps.check.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all tags
+          fetch-depth: 0
       
-      - name: Get version from package.json
-        id: check
+      - name: Get version and check if release needed
+        id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          # Check if tag already exists
           if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-            echo "Tag v$VERSION already exists, skipping release"
+            echo "Tag v$VERSION already exists, skipping"
             echo "should_release=false" >> $GITHUB_OUTPUT
           else
-            echo "New version v$VERSION detected, will create release"
+            echo "New version v$VERSION detected"
             echo "should_release=true" >> $GITHUB_OUTPUT
           fi
-
-  create-release:
-    needs: check-and-tag
-    if: needs.check-and-tag.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Create and push tag
+      - name: Create tag and release
+        if: steps.version.outputs.should_release == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          VERSION=${{ steps.version.outputs.version }}
+          
+          # Configure git
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag v${{ needs.check-and-tag.outputs.version }}
-          git push origin v${{ needs.check-and-tag.outputs.version }}
-      
-      - name: Create GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.check-and-tag.outputs.version }}
-          name: v${{ needs.check-and-tag.outputs.version }}
-          generate_release_notes: true
-          draft: false
-          prerelease: false
-
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Create and push tag
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+          
+          # Create GitHub release using gh CLI
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --generate-notes
