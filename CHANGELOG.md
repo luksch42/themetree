@@ -2,6 +2,13 @@
 
 All notable changes to Themetree will be documented in this file.
 
+## [0.1.1] - 2024-11-25
+
+### Changed
+- Updated README with marketplace links and badges
+- Added comprehensive FAQ section
+- Added hiring section for Super44
+
 ## [0.1.0] - 2024-11-25
 
 ### Added

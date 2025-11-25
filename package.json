@@ -2,7 +2,7 @@
   "name": "themetree",
   "displayName": "Themetree",
   "description": "Automatically color your IDE based on the current git branch - perfect for worktrees",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "hjegeorge",
   "engines": {
     "vscode": "^1.74.0"
@@ -66,6 +66,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
+    "test": "echo \"No tests yet\" && exit 0",
     "publish": "vsce publish",
     "package": "vsce package"
   },
