@@ -75,3 +75,6 @@ The hash function is deterministic, so `feature/user-auth` will always be the sa
 ## 📝 License
 
 MIT
+
+## Note
+This was all built by Opus 4.5, so if you find issues, please make a PR. 

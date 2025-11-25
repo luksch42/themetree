@@ -13,6 +13,12 @@ export class ThemeApplier {
    * Apply theme colors for a given branch name.
    */
   async applyTheme(branchName: string | undefined): Promise<void> {
+    // Don't try to apply if no workspace is open
+    if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+      console.log('Themetree: No workspace open, skipping theme application');
+      return;
+    }
+
     const config = vscode.workspace.getConfiguration('themetree');
     const enabled = config.get<boolean>('enabled', true);
     
@@ -141,6 +147,11 @@ export class ThemeApplier {
    * Clear all Themetree color customizations.
    */
   async clearColors(silent: boolean = false): Promise<void> {
+    // Don't try to clear if no workspace is open
+    if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+      return;
+    }
+
     const config = vscode.workspace.getConfiguration();
     
     await config.update(

@@ -31,12 +31,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(refreshCommand, clearCommand);
 
+  // Listen for workspace folder changes (when user opens a folder)
+  const workspaceFoldersChanged = vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+    console.log('Themetree: Workspace folders changed, reinitializing...');
+    await branchWatcher?.initialize();
+    const currentBranch = branchWatcher?.getCurrentBranch();
+    await themeApplier?.applyTheme(currentBranch);
+  });
+
+  context.subscriptions.push(workspaceFoldersChanged);
+
   // Start watching for branch changes
   await branchWatcher.initialize();
 
-  // Apply theme for current branch immediately
-  const currentBranch = branchWatcher.getCurrentBranch();
-  await themeApplier.applyTheme(currentBranch);
+  // Apply theme for current branch immediately (if workspace is open)
+  if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+    const currentBranch = branchWatcher.getCurrentBranch();
+    await themeApplier.applyTheme(currentBranch);
+  }
 
   console.log('Themetree: Activated successfully');
 }

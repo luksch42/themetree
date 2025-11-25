@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 
 /**
- * Git extension API types (simplified)
+ * Git extension API types
+ * Based on vscode.git extension's actual API
  */
 interface GitExtension {
   getAPI(version: number): GitAPI;
@@ -10,11 +11,12 @@ interface GitExtension {
 interface GitAPI {
   repositories: Repository[];
   onDidOpenRepository: vscode.Event<Repository>;
+  onDidCloseRepository: vscode.Event<Repository>;
 }
 
 interface Repository {
   state: RepositoryState;
-  onDidChangeState: vscode.Event<RepositoryState>;
+  rootUri: vscode.Uri;
 }
 
 interface RepositoryState {
@@ -23,6 +25,7 @@ interface RepositoryState {
     commit?: string;
     type?: number;
   };
+  onDidChange: vscode.Event<void>;
 }
 
 export type BranchChangeHandler = (branchName: string | undefined) => void;
@@ -35,6 +38,7 @@ export class BranchWatcher {
   private disposables: vscode.Disposable[] = [];
   private onBranchChange: BranchChangeHandler;
   private currentBranch: string | undefined;
+  private pollInterval: NodeJS.Timeout | undefined;
 
   constructor(onBranchChange: BranchChangeHandler) {
     this.onBranchChange = onBranchChange;
@@ -44,44 +48,80 @@ export class BranchWatcher {
    * Initialize the watcher by connecting to VSCode's git extension.
    */
   async initialize(): Promise<void> {
-    const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git');
-    
-    if (!gitExtension) {
-      console.log('Themetree: Git extension not found');
-      return;
-    }
+    try {
+      const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git');
+      
+      if (!gitExtension) {
+        console.log('Themetree: Git extension not found, using polling fallback');
+        this.startPolling();
+        return;
+      }
 
-    if (!gitExtension.isActive) {
-      await gitExtension.activate();
-    }
+      if (!gitExtension.isActive) {
+        await gitExtension.activate();
+      }
 
-    this.gitAPI = gitExtension.exports.getAPI(1);
-    
-    // Watch existing repositories
-    for (const repo of this.gitAPI.repositories) {
-      this.watchRepository(repo);
-    }
-
-    // Watch for new repositories being opened
-    this.disposables.push(
-      this.gitAPI.onDidOpenRepository((repo) => {
+      this.gitAPI = gitExtension.exports.getAPI(1);
+      
+      // Watch existing repositories
+      for (const repo of this.gitAPI.repositories) {
         this.watchRepository(repo);
-      })
-    );
+      }
 
-    // Get initial branch
-    this.checkCurrentBranch();
+      // Watch for new repositories being opened
+      this.disposables.push(
+        this.gitAPI.onDidOpenRepository((repo) => {
+          console.log('Themetree: New repository opened');
+          this.watchRepository(repo);
+          this.checkCurrentBranch();
+        })
+      );
+
+      // Get initial branch
+      this.checkCurrentBranch();
+      
+      console.log('Themetree: Git watcher initialized');
+    } catch (error) {
+      console.error('Themetree: Error initializing git watcher, using polling fallback', error);
+      this.startPolling();
+    }
   }
 
   /**
    * Watch a repository for state changes.
    */
   private watchRepository(repo: Repository): void {
-    this.disposables.push(
-      repo.onDidChangeState(() => {
-        this.checkCurrentBranch();
-      })
-    );
+    try {
+      // The event is on repo.state.onDidChange, not repo.onDidChangeState
+      if (repo.state && typeof repo.state.onDidChange === 'function') {
+        this.disposables.push(
+          repo.state.onDidChange(() => {
+            this.checkCurrentBranch();
+          })
+        );
+        console.log('Themetree: Watching repository:', repo.rootUri?.fsPath);
+      } else {
+        console.log('Themetree: Repository state.onDidChange not available, using polling');
+        this.startPolling();
+      }
+    } catch (error) {
+      console.error('Themetree: Error watching repository', error);
+      this.startPolling();
+    }
+  }
+
+  /**
+   * Fallback polling mechanism if git events don't work.
+   */
+  private startPolling(): void {
+    if (this.pollInterval) {
+      return; // Already polling
+    }
+    
+    console.log('Themetree: Starting polling fallback (every 2 seconds)');
+    this.pollInterval = setInterval(() => {
+      this.checkCurrentBranch();
+    }, 2000);
   }
 
   /**
@@ -91,6 +131,7 @@ export class BranchWatcher {
     const branchName = this.getCurrentBranch();
     
     if (branchName !== this.currentBranch) {
+      console.log(`Themetree: Branch changed from "${this.currentBranch}" to "${branchName}"`);
       this.currentBranch = branchName;
       this.onBranchChange(branchName);
     }
@@ -106,7 +147,7 @@ export class BranchWatcher {
 
     // Use the first repository (primary workspace)
     const repo = this.gitAPI.repositories[0];
-    return repo.state.HEAD?.name;
+    return repo.state?.HEAD?.name;
   }
 
   /**
@@ -121,10 +162,14 @@ export class BranchWatcher {
    * Clean up resources.
    */
   dispose(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = undefined;
+    }
+    
     for (const d of this.disposables) {
       d.dispose();
     }
     this.disposables = [];
   }
 }
-
