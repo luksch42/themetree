@@ -1,4 +1,4 @@
-name: Auto Release
+name: Auto Tag on Version Bump
 
 on:
   push:
@@ -11,44 +11,25 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  tag:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
-      - name: Get version and check if release needed
-        id: version
+      - name: Check for new version and create tag
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
           
           if git rev-parse "v$VERSION" >/dev/null 2>&1; then
             echo "Tag v$VERSION already exists, skipping"
-            echo "should_release=false" >> $GITHUB_OUTPUT
           else
-            echo "New version v$VERSION detected"
-            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "Creating tag v$VERSION"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag "v$VERSION"
+            git push origin "v$VERSION"
+            echo "✅ Tag v$VERSION created and pushed"
+            echo "📦 This will trigger the publish workflow"
           fi
-      
-      - name: Create Release
-        if: steps.version.outputs.should_release == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const version = '${{ steps.version.outputs.version }}';
-            const tagName = `v${version}`;
-            
-            // Create the release (this also creates the tag)
-            const release = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: tagName,
-              name: tagName,
-              generate_release_notes: true,
-              draft: false,
-              prerelease: false
-            });
-            
-            console.log(`Created release: ${release.data.html_url}`);
