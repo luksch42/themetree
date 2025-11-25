@@ -32,22 +32,23 @@ jobs:
             echo "should_release=true" >> $GITHUB_OUTPUT
           fi
       
-      - name: Create tag and release
+      - name: Create Release
         if: steps.version.outputs.should_release == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-          
-          # Configure git
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          # Create and push tag
-          git tag "v$VERSION"
-          git push origin "v$VERSION"
-          
-          # Create GitHub release using gh CLI
-          gh release create "v$VERSION" \
-            --title "v$VERSION" \
-            --generate-notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.version.outputs.version }}';
+            const tagName = `v${version}`;
+            
+            // Create the release (this also creates the tag)
+            const release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tagName,
+              name: tagName,
+              generate_release_notes: true,
+              draft: false,
+              prerelease: false
+            });
+            
+            console.log(`Created release: ${release.data.html_url}`);
