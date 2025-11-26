@@ -14,12 +14,21 @@ interface CodeWorkspace {
 
 /**
  * Manages external .code-workspace files for per-window colors without modifying repo files.
+ * Also supports direct .vscode/settings.json mode when useWorkspaceFile is false.
  */
 export class WorkspaceManager {
   private context: vscode.ExtensionContext;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
+  }
+
+  /**
+   * Check if workspace file mode is enabled.
+   */
+  isWorkspaceFileMode(): boolean {
+    const config = vscode.workspace.getConfiguration('themetree');
+    return config.get<boolean>('useWorkspaceFile', true);
   }
 
   /**
@@ -202,6 +211,27 @@ export class WorkspaceManager {
   workspaceFileExists(folderPath: string): boolean {
     const workspacePath = this.getThemetreeWorkspacePath(folderPath);
     return fs.existsSync(workspacePath);
+  }
+
+  /**
+   * Apply colors directly to .vscode/settings.json (non-workspace mode).
+   */
+  async applyColorsToSettings(colorCustomizations: Record<string, string>): Promise<void> {
+    const config = vscode.workspace.getConfiguration('workbench');
+    
+    if (Object.keys(colorCustomizations).length > 0) {
+      await config.update('colorCustomizations', colorCustomizations, vscode.ConfigurationTarget.Workspace);
+    } else {
+      await config.update('colorCustomizations', undefined, vscode.ConfigurationTarget.Workspace);
+    }
+  }
+
+  /**
+   * Clear colors from .vscode/settings.json.
+   */
+  async clearSettingsColors(): Promise<void> {
+    const config = vscode.workspace.getConfiguration('workbench');
+    await config.update('colorCustomizations', undefined, vscode.ConfigurationTarget.Workspace);
   }
 }
 

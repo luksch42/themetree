@@ -39,6 +39,7 @@ export class ThemeApplier {
     const intensity = config.get<Intensity>('intensity', 'medium');
     const defaultBranches = config.get<string[]>('defaultBranches', ['main', 'master', 'develop', 'dev']);
     const excludedBranches = config.get<string[]>('excludedBranches', []);
+    const useWorkspaceFile = this.workspaceManager.isWorkspaceFileMode();
 
     // No branch, default branch, or excluded branch = clear theme
     if (!branchName || 
@@ -46,6 +47,17 @@ export class ThemeApplier {
         this.isExcluded(branchName, excludedBranches)) {
       await this.clearColors(true); // Silent clear
       return { applied: false, needsReopen: false };
+    }
+
+    // If NOT using workspace file mode, apply directly to settings.json
+    if (!useWorkspaceFile) {
+      const hash = hashString(branchName);
+      const index = hashToIndex(hash, COLOR_PALETTE.length);
+      const theme = getThemeByIndex(index);
+      
+      await this.applyColorsToSettings(theme, intensity);
+      vscode.window.setStatusBarMessage(`Themetree: ${theme.name} theme applied`, 3000);
+      return { applied: true, needsReopen: false };
     }
 
     // Check if we're in a Themetree workspace
@@ -110,6 +122,14 @@ export class ThemeApplier {
   }
 
   /**
+   * Apply colors directly to .vscode/settings.json (non-workspace mode).
+   */
+  private async applyColorsToSettings(theme: ThemeColors, intensity: Intensity): Promise<void> {
+    const colors = this.generateColorCustomizations(theme, intensity);
+    await this.workspaceManager.applyColorsToSettings(colors);
+  }
+
+  /**
    * Generate color customizations based on theme and intensity.
    */
   private generateColorCustomizations(theme: ThemeColors, intensity: Intensity): Record<string, string> {
@@ -170,6 +190,18 @@ export class ThemeApplier {
       return;
     }
 
+    const useWorkspaceFile = this.workspaceManager.isWorkspaceFileMode();
+
+    if (!useWorkspaceFile) {
+      // Clear from settings.json
+      await this.workspaceManager.clearSettingsColors();
+      if (!silent) {
+        vscode.window.showInformationMessage('Themetree: Colors cleared');
+      }
+      return;
+    }
+
+    // Clear from workspace file
     const folderPath = this.workspaceManager.getOriginalFolderPath();
     
     if (!folderPath) {

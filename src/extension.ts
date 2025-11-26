@@ -75,7 +75,8 @@ async function handleThemeApplication(branchName: string | undefined): Promise<v
 
   const result = await themeApplier.applyTheme(branchName);
   
-  if (result.needsReopen) {
+  // Only handle reopen prompts if using workspace file mode
+  if (result.needsReopen && workspaceManager.isWorkspaceFileMode()) {
     // Not in a Themetree workspace, need to prompt for reopen
     const folderPath = workspaceManager.getOriginalFolderPath();
     
@@ -91,13 +92,13 @@ async function handleThemeApplication(branchName: string | undefined): Promise<v
     // Check if a workspace file already exists (user might have closed and reopened)
     if (workspaceManager.workspaceFileExists(folderPath)) {
       // Workspace file exists, prompt to reopen it
-      const result = await vscode.window.showInformationMessage(
+      const promptResult = await vscode.window.showInformationMessage(
         'Themetree: A Themetree workspace exists for this folder. Reopen to enable per-window colors?',
         'Reopen',
         'Not Now'
       );
       
-      if (result === 'Reopen') {
+      if (promptResult === 'Reopen') {
         const workspacePath = workspaceManager.getThemetreeWorkspacePath(folderPath);
         const workspaceUri = vscode.Uri.file(workspacePath);
         await vscode.commands.executeCommand('vscode.openFolder', workspaceUri);
