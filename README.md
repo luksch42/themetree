@@ -11,7 +11,7 @@ Perfect for developers who use git worktrees - each branch gets a distinct, visu
 
 ![Themetree Demo](https://super44-images-hosted.s3.eu-central-1.amazonaws.com/themetree.gif)
 
-<a href="https://www.producthunt.com/products/themetree?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-themetree" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1042511&theme=light&t=1764173156456" alt="Themetree - An&#0032;IDE&#0032;extension&#0032;so&#0032;you&#0032;don&#0039;t&#0032;confuse&#0032;worktrees&#0032;vibecoding | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+<a href="https://www.producthunt.com/products/themetree?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-themetree" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.png?post_id=1042511&theme=light&t=1764173156456" alt="Themetree - An&#0032;IDE&#0032;extension&#0032;so&#0032;you&#0032;don&#0039;t&#0032;confuse&#0032;worktrees&#0032;vibecoding | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 
 ## ✨ Features
 
