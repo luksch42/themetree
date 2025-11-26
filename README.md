@@ -16,6 +16,8 @@ Perfect for developers who use git worktrees - each branch gets a distinct, visu
 ## ✨ Features
 
 - **Deterministic colors** - The same branch name always produces the same color, across all machines
+- **Per-window colors** - Multiple worktree windows show their own distinct colors simultaneously
+- **Non-invasive** - Uses external workspace files, keeping your repo's `.vscode/settings.json` untouched
 - **12 curated themes** - Beautiful dark-mode color palettes (Ocean, Forest, Sunset, Violet, Rose, Teal, Amber, Crimson, Indigo, Emerald, Fuchsia, Cyan)
 - **Default branches** - `main`, `master`, `develop` keep your normal theme (no color overrides)
 - **Three intensity levels** - Subtle, Medium, or Vibrant theming
@@ -55,6 +57,7 @@ npm run compile
 | `themetree.intensity` | `"medium"` | Color intensity: `subtle`, `medium`, or `vibrant` |
 | `themetree.defaultBranches` | `["main", "master", "develop", "dev"]` | Branches that keep default theme (no colors) |
 | `themetree.excludedBranches` | `[]` | Branch patterns to exclude (supports wildcards like `release/*`) |
+| `themetree.useWorkspaceFile` | `true` | Use external workspace file for per-window colors. When `false`, stores colors in `.vscode/settings.json` |
 
 ## 🎨 Color Palette
 
@@ -79,24 +82,29 @@ The extension includes 12 carefully curated dark-mode themes:
 
 - **Themetree: Refresh Theme** - Manually refresh the current theme
 - **Themetree: Clear Theme Colors** - Remove all Themetree color customizations
+- **Themetree: Reopen as Themetree Workspace** - Manually reopen the current folder as a Themetree workspace
 
 ## 🤔 How It Works
 
 1. Themetree watches for git branch changes using VSCode's built-in git extension
 2. When a branch change is detected, it hashes the branch name using the djb2 algorithm
 3. The hash is mapped to one of 12 curated color themes using golden ratio distribution
-4. Color customizations are applied to `workbench.colorCustomizations` in workspace settings
+4. By default, Themetree creates an external `.code-workspace` file in `~/.themetree/workspaces/` with friendly names like `projectname-swift-falcon.code-workspace`. This keeps your repo files unmodified and enables per-window colors
 5. Default branches (`main`, `master`, etc.) clear all customizations for your normal theme
 
 The hash function is deterministic, so `feature/user-auth` will always be the same color, whether you're on your laptop, desktop, or colleague's machine.
+
+**Note:** On first use, Themetree will prompt you to reopen your folder as a Themetree workspace. This is a one-time setup that enables per-window colors. You can disable this behavior by setting `themetree.useWorkspaceFile` to `false`.
 
 ## ❓ FAQ
 
 ### Will this override my existing workspace color customizations?
 
-**Yes.** Themetree writes to `workbench.colorCustomizations` in your workspace settings. If you have existing customizations, they will be replaced when Themetree applies a theme, and **cleared entirely** when you switch to a default branch (main, master, etc.).
+**By default, no.** Themetree now uses external workspace files stored in `~/.themetree/workspaces/`, so your repo's `.vscode/settings.json` remains untouched.
 
-**Workaround:** If you have workspace-specific colors you want to keep, consider:
+**If you set `useWorkspaceFile: false`:** Themetree will write to `workbench.colorCustomizations` in your workspace settings. In this mode, existing customizations will be replaced when Themetree applies a theme, and **cleared entirely** when you switch to a default branch (main, master, etc.).
+
+**Workaround for legacy mode:** If you have workspace-specific colors you want to keep:
 - Adding those branches to `themetree.excludedBranches`
 - Using User-level settings instead of Workspace settings for your custom colors (User settings won't be affected)
 
